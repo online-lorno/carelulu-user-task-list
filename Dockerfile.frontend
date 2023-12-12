@@ -1,0 +1,52 @@
+# base
+FROM node:20-alpine3.17 as base
+
+# builder
+FROM base as builder
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+RUN corepack enable
+RUN corepack prepare pnpm@8 --activate
+
+COPY pnpm-lock.yaml .
+RUN pnpm fetch
+
+COPY . .
+RUN pnpm install --offline
+RUN pnpm --filter frontend build
+
+# runtime
+FROM node:20-alpine3.17 as runtime
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+WORKDIR /app/apps/frontend
+COPY --from=builder /app/apps/frontend/public ./public
+COPY --from=builder /app/apps/frontend/start.sh ./start.sh
+
+RUN chmod +x ./start.sh
+RUN chown nextjs:nodejs ./start.sh
+
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+# Automatically leverage output traces to reduce image size
+# https://nextjs.org/docs/advanced-features/output-file-tracing
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./.next/static
+
+USER nextjs
+
+EXPOSE 5000
+
+ENV PORT=5000
+# set hostname to localhost
+ENV HOSTNAME "0.0.0.0"
+
+# # server.js is created by next build from the standalone output
+# # https://nextjs.org/docs/pages/api-reference/next-config-js/output
+# CMD ["node", "apps/frontend/server.js"]
+
+ENTRYPOINT [ "./start.sh" ]

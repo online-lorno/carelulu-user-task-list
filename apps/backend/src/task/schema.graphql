@@ -1,0 +1,28 @@
+scalar Date
+
+type Task {
+  id: ID!
+  userId: String!
+  note: String!
+  date: Date!
+}
+
+input TaskCreateInput {
+  note: String!
+  date: Date!
+}
+
+input TaskUpdateInput {
+  note: String
+  date: Date
+}
+
+type Query {
+  tasks: [Task!]!
+}
+
+type Mutation {
+  taskCreate(input: TaskCreateInput): Task!
+  taskUpdate(id: ID!, input: TaskUpdateInput): Task!
+  taskDelete(id: ID!): Task!
+}

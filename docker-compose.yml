@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  mysqldb:
+    platform: linux/amd64
+    image: mysql:5.7
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      - MYSQL_ROOT_PASSWORD=$MYSQLDB_ROOT_PASSWORD
+      - MYSQL_DATABASE=$MYSQLDB_DATABASE
+    ports:
+      - $MYSQLDB_LOCAL_PORT:$MYSQLDB_DOCKER_PORT
+    volumes:
+      - db:/var/lib/mysql
+
+  backend:
+    depends_on:
+      - mysqldb
+    build:
+      dockerfile: Dockerfile.backend
+      context: .
+    restart: unless-stopped
+    env_file: ./.env
+    ports:
+      - $BACKEND_LOCAL_PORT:$BACKEND_DOCKER_PORT
+    environment:
+      - DATABASE_URL=mysql://$MYSQLDB_USER:$MYSQLDB_ROOT_PASSWORD@host.docker.internal:$MYSQLDB_DOCKER_PORT/$MYSQLDB_DATABASE
+      - PORT=$BACKEND_LOCAL_PORT
+      - JWT_SECRET=$BACKEND_JWT_SECRET
+
+  # frontend:
+  #   build:
+  #     dockerfile: Dockerfile.frontend
+  #     context: .
+  #   restart: unless-stopped
+  #   env_file: ./.env
+  #   ports:
+  #     - $FRONTEND_LOCAL_PORT:$FRONTEND_DOCKER_PORT
+  #   environment:
+  #     - REST_API_URL=$FRONTEND_REST_API_URL
+  #     - GRAPHQL_API_URL=$FRONTEND_GRAPHQL_API_URL
+  #     - NEXT_PUBLIC_REST_API_URL=$FRONTEND_NEXT_PUBLIC_REST_API_URL
+  #     - NEXT_PUBLIC_GRAPHQL_API_URL=$FRONTEND_NEXT_PUBLIC_GRAPHQL_API_URL
+
+volumes:
+  db:

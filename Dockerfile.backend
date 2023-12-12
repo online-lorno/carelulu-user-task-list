@@ -1,0 +1,35 @@
+# builder
+FROM --platform=linux/amd64 node:20-alpine3.17 as builder
+WORKDIR /app
+
+RUN apk update
+
+RUN corepack enable
+RUN corepack prepare pnpm@8 --activate
+
+COPY pnpm-lock.yaml .
+RUN pnpm fetch
+
+COPY . .
+RUN pnpm install --offline
+RUN pnpm --filter backend build
+
+# runtime
+FROM --platform=linux/amd64 node:20-alpine3.17 as runtime
+
+RUN apk update
+
+COPY --from=builder /app/node_modules ./app/node_modules
+
+WORKDIR /app/apps/backend
+
+COPY --from=builder /app/apps/backend/dist ./dist
+COPY --from=builder /app/apps/backend/src/**/*.graphql ./dist/src/
+COPY --from=builder /app/apps/backend/node_modules ./node_modules
+COPY --from=builder /app/apps/backend/prisma ./prisma
+COPY --from=builder /app/apps/backend/start.sh ./start.sh
+
+RUN chmod +x ./start.sh
+
+ENV PORT=3000
+ENTRYPOINT [ "./start.sh" ]

@@ -1,0 +1,26 @@
+{
+  "extends": "next/core-web-vitals",
+  "plugins": ["simple-import-sort"],
+  "rules": {
+    "simple-import-sort/imports": "error",
+    "simple-import-sort/exports": "error"
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "rules": {
+        "simple-import-sort/imports": [
+          "error",
+          {
+            "groups": [
+              // Packages `react` related packages come first.
+              ["^react", "^@?\\w"],
+              // Side effect imports.
+              ["^\\u0000"]
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
